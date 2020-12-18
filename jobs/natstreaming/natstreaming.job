@@ -1,0 +1,58 @@
+job "natsio" {
+  datacenters = ["dc1"]
+
+  group "nats" {
+    count = 1
+       network {
+         port "client" {
+          static = 4222 
+         }
+         port "monitoring" {
+          static = 8222
+         }
+         port routing {
+          static = 6222
+         }
+    }
+    restart {
+      attempts = 10
+      interval = "5m"
+      delay    = "25s"
+      mode     = "delay"
+    }
+
+    task "nats" {
+      driver = "docker"
+      
+      config {
+        image = "nats:alpine3.12"
+
+
+        ports = ["client","monitoring","routing"]
+      }
+
+
+      service {
+        port = "client"
+        name = "nats"
+        tags = ["faas"]
+
+        check {
+           name     = "monitoring check"
+	   type     = "http"
+           port     = "monitoring"
+           path     = "/connz"
+           interval = "5s"
+           timeout  = "2s"
+        }
+	check {
+	  name      = "service check"
+          type      = "tcp"
+	  port      = "client"
+          interval  = "5s"
+          timeout   = "2s"
+	}
+      }
+    }
+  }
+}  
